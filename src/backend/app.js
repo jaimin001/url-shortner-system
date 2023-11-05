@@ -4,6 +4,9 @@ const bodyParser = require('body-parser');
 const mongoose = require('./services/database');
 const redis = require('./services/redis');
 const dotenv = require("dotenv");
+const session = require("express-session");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
 dotenv.config();
 
@@ -27,6 +30,15 @@ app.use(bodyParser.json());
 
 
 app.use(morgan('dev'));
+
+app.use(session({
+    secret: "Our little secret.",
+    resave: false,
+    saveUninitialized: false
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
 
 const urlRoutes = require('./controllers/routes');
 app.use('/', urlRoutes);
