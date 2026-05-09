@@ -1,66 +1,43 @@
-# URL Shortening Service
+# URL Shortener
 
-## Overview
+Hey there! Thanks for checking out this project. 
 
-Welcome to the URL Shortening Service! This system is designed to generate short and unique aliases for long URLs, making them easier to share and manage. 
+This is a simple URL shortener service I put together. It takes long, messy URLs and turns them into short, easy-to-share links. I built this to learn how these things work under the hood.
 
-## Table of Contents
+## How it works
+The system is split into two main parts:
+- **Backend:** Written in Go, it handles the requests, talks to the database, and keeps everything running. It uses MongoDB for storage and a caching layer for speed.
+- **Frontend:** A clean React interface built with Vite and Tailwind CSS. It lets you quickly shorten your URLs and see your recent links.
 
+## Getting Started
 
+### Prerequisites
+You'll need Go and Node.js installed on your machine.
 
-### Functional Requirements:
+### Running the Backend
+1. Head over to the `src/backend` folder.
+2. Make sure you have your database running.
+3. Run the server:
+   ```bash
+   go run main.go
+   ```
 
-- Generate a shorter and unique alias for a given URL.
-- Allow users to customize short links.
-- Redirect users to the original link when accessing a short link.
-- Set expiration times for short links.
+### Running the Frontend
+1. Go into the `frontend` folder.
+2. Install the packages:
+   ```bash
+   npm install
+   ```
+3. Start the dev server:
+   ```bash
+   npm run dev
+   ```
 
-### Non-Functional Requirements:
+## Built With
+- **Language:** Go
+- **Frontend:** React, TypeScript, Tailwind CSS
+- **Database:** MongoDB
+- **Caching:** Valkey (Redis-compatible)
 
-- High availability to ensure uninterrupted URL redirection.
-- Real-time URL redirection with minimal latency.
-- Shortened links should be unpredictable.
-- Provide analytics on link redirections.
-- Expose services through REST APIs.
-
-### Extended Requirements:
-
-- Analytics tracking for redirection statistics.
-
-### Database Schema:
-
-Two tables:
-1. URL Mappings
-2. User Data
-
-### Database Choice: MongoDB
-
-
-### Encoding Actual URL:
-
-- Compute a unique hash (e.g., MD5 or SHA256) of the URL.
-- Encode the hash using base64.
-- Choose a fixed length for the short key (e.g., 6 characters).
-
-### Generating Keys Offline:
-
-- Use a Key Generation Service (KGS) to pre-generate random keys.
-- Store generated keys in a key-DB.
-- Ensure uniqueness and handle concurrency.
-
-### Hash-Based Partitioning:
-
-- Use a hash of the short link to determine the partition.
-- Implement 'Consistent Hashing' to handle overloaded partitions.
-
-### Cache
-
-- Using a caching solution like Memcached.
-- Cache frequently accessed URLs.
-- Implement Least Recently Used (LRU) eviction policy.
-
-### Load Balancer
-
-- Implement load balancing at three levels.
-- Initially use simple Round Robin.
-- Consider server load for more intelligent load balancing.
+## Any Questions?
+I'm still tinkering with this, so feel free to look around! If you see something that could be better or just want to say hi, feel free to open an issue or reach out. Thanks again for stopping by!
