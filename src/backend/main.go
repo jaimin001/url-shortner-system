@@ -21,13 +21,9 @@ func main() {
 	// Setup Router
 	r := gin.Default()
 
-	r.POST("/shorten", controllers.ShortenHandler)
-	r.GET("/:key", controllers.RedirectHandler)
-	r.GET("/links", controllers.ListLinksHandler)
-	
-	// Add CORS middleware
+	// Add CORS middleware first
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if c.Request.Method == "OPTIONS" {
@@ -36,6 +32,10 @@ func main() {
 		}
 		c.Next()
 	})
+
+	r.POST("/shorten", controllers.ShortenHandler)
+	r.GET("/:key", controllers.RedirectHandler)
+	r.GET("/links", controllers.ListLinksHandler)
 
 
 	log.Printf("Server starting on port %s", cfg.Port)
