@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"log"
 	"math/rand"
 	"time"
@@ -10,9 +11,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+var LinkTTLHours int = 24
+
 func PrePopulateKeys() {
 	for {
-		// Check current size of the list
 		size, err := ValkeyClient.LLen(context.TODO(), "available_keys").Result()
 		if err != nil {
 			log.Println("Error checking key list size:", err)
@@ -20,44 +22,41 @@ func PrePopulateKeys() {
 			continue
 		}
 
-		// Maintain a minimum buffer of 1000 keys
 		if size < 1000 {
 			for i := 0; i < 100; i++ {
 				key := generateKey(6)
 				ValkeyClient.RPush(context.TODO(), "available_keys", key)
 			}
 		}
-		time.Sleep(1 * time.Second) // Avoid tight loop
+		time.Sleep(1 * time.Second)
 	}
 }
 
 func ShortenURL(originalURL string) (string, error) {
 	var key string
-	// Try to pop a key
 	key, err := ValkeyClient.LPop(context.TODO(), "available_keys").Result()
 	if err != nil {
-		// Fallback to random generation if list is empty or redis fails
 		key = generateKey(6)
 	}
+
+	ttl := time.Duration(LinkTTLHours) * time.Hour
+	expiresAt := time.Now().Add(ttl)
 
 	newURL := models.ShortURL{
 		ID:        key,
 		Original:  originalURL,
 		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		ExpiresAt: expiresAt,
 	}
 
-	// Save to MongoDB
 	collection := MongoClient.Database("url_shortner").Collection("urls")
 	_, err = collection.InsertOne(context.TODO(), newURL)
 	if err != nil {
 		return "", err
 	}
 
-	// Save to Valkey
-	err = ValkeyClient.Set(context.TODO(), key, originalURL, 24*time.Hour).Err()
+	err = ValkeyClient.Set(context.TODO(), key, originalURL, ttl).Err()
 	if err != nil {
-		// Just log error if cache fails, as Mongo is the source of truth
 		return key, nil
 	}
 
@@ -65,13 +64,11 @@ func ShortenURL(originalURL string) (string, error) {
 }
 
 func GetOriginalURL(key string) (string, error) {
-	// Try Valkey first
 	val, err := ValkeyClient.Get(context.TODO(), key).Result()
 	if err == nil {
 		return val, nil
 	}
 
-	// If not in Valkey, check MongoDB
 	collection := MongoClient.Database("url_shortner").Collection("urls")
 	var result models.ShortURL
 	err = collection.FindOne(context.TODO(), bson.M{"_id": key}).Decode(&result)
@@ -79,10 +76,30 @@ func GetOriginalURL(key string) (string, error) {
 		return "", err
 	}
 
-	// Backfill Valkey
-	ValkeyClient.Set(context.TODO(), key, result.Original, 24*time.Hour)
+	if time.Now().After(result.ExpiresAt) {
+		return "", errors.New("link has expired")
+	}
+
+	ttl := time.Until(result.ExpiresAt)
+	if ttl > 0 {
+		ValkeyClient.Set(context.TODO(), key, result.Original, ttl)
+	}
 
 	return result.Original, nil
+}
+
+func CleanupExpiredLinks() {
+	for {
+		collection := MongoClient.Database("url_shortner").Collection("urls")
+		filter := bson.M{"expires_at": bson.M{"$lt": time.Now()}}
+
+		_, err := collection.DeleteMany(context.TODO(), filter)
+		if err != nil {
+			log.Println("Error cleaning up expired links:", err)
+		}
+
+		time.Sleep(1 * time.Hour)
+	}
 }
 
 func generateKey(n int) string {
