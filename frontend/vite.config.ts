@@ -7,4 +7,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/shorten': 'http://localhost:8080',
+      '/links': 'http://localhost:8080',
+      '/:key': 'http://localhost:8080',
+    },
+  },
 });
