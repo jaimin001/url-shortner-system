@@ -4,7 +4,6 @@ import { shortenURL, fetchRecentLinks } from '../api';
 
 export const Dashboard = () => {
   const [url, setUrl] = useState('');
-  const [alias, setAlias] = useState('');
   const queryClient = useQueryClient();
 
   const { data: links = [] } = useQuery({
@@ -17,10 +16,10 @@ export const Dashboard = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['links'] });
       setUrl('');
-      setAlias('');
     },
-    onError: (err) => {
+    onError: (err: any) => {
       console.error("Mutation error:", err);
+      alert(err.response?.data?.error || "Failed to shorten URL");
     }
   });
 
@@ -56,8 +55,14 @@ export const Dashboard = () => {
           <tbody>
             {links.map((link: any, i: number) => (
               <tr key={i} className="border-t">
-                <td className="px-6 py-3 text-indigo-600">{link.id}</td>
-                <td className="px-6 py-3 truncate max-w-xs">{link.original}</td>
+                <td className="px-6 py-3 text-indigo-600 font-mono">
+                  <a href={`http://localhost:8080/${link.ID}`} target="_blank" rel="noreferrer">
+                    {link.ID}
+                  </a>
+                </td>
+                <td className="px-6 py-3 truncate max-w-xs" title={link.Original}>
+                  {link.Original}
+                </td>
               </tr>
             ))}
           </tbody>
