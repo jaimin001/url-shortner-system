@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"net/url"
+	"strings"
 	"url-shortner/models"
 	"url-shortner/services"
 
@@ -15,6 +16,32 @@ type ShortenRequest struct {
 	URL string `json:"url" binding:"required"`
 }
 
+var allowedSchemes = []string{"http", "https"}
+
+func validateURL(rawURL string) error {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return err
+	}
+
+	if parsed.Scheme == "" || parsed.Host == "" {
+		return err
+	}
+
+	schemeAllowed := false
+	for _, scheme := range allowedSchemes {
+		if strings.ToLower(parsed.Scheme) == scheme {
+			schemeAllowed = true
+			break
+		}
+	}
+	if !schemeAllowed {
+		return err
+	}
+
+	return nil
+}
+
 func ShortenHandler(c *gin.Context) {
 	var req ShortenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -22,10 +49,13 @@ func ShortenHandler(c *gin.Context) {
 		return
 	}
 
-	// Basic URL Validation
-	_, err := url.ParseRequestURI(req.URL)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL format"})
+	if len(req.URL) > 2048 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "URL too long (max 2048 characters)"})
+		return
+	}
+
+	if err := validateURL(req.URL); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL: only http/https URLs are allowed"})
 		return
 	}
 
